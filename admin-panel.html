@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroWallet Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #0f2c5c 50%, #051a3a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 200, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 150, 255, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        /* Passcode Modal */
+        .passcode-container {
+            background: rgba(15, 44, 92, 0.95);
+            border: 2px solid rgba(0, 200, 255, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 150, 200, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.5s ease;
+        }
+
+        .passcode-container h1 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        .passcode-container p {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .passcode-input {
+            width: 100%;
+            padding: 16px;
+            font-size: 20px;
+            letter-spacing: 4px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(0, 200, 255, 0.4);
+            border-radius: 12px;
+            color: #00d4ff;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .passcode-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3),
+                        inset 0 0 10px rgba(0, 212, 255, 0.1);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .passcode-input::placeholder {
+            color: rgba(0, 212, 255, 0.5);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: #0a1628;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+            margin-bottom: 10px;
+        }
+
+        .btn-submit:hover {
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.6),
+                        0 10px 20px rgba(0, 150, 200, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: #ff4444;
+            font-size: 13px;
+            margin-top: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .error-message.show {
+            opacity: 1;
+        }
+
+        /* Admin Panel */
+        .admin-panel {
+            display: none;
+            background: rgba(15, 44, 92, 0.95);
+            border: 2px solid rgba(0, 200, 255, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 150, 200, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.5s ease;
+        }
+
+        .admin-panel.show {
+            display: block;
+        }
+
+        .admin-panel h1 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        .admin-panel .subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: rgba(0, 212, 255, 0.8);
+            font-size: 13px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(0, 200, 255, 0.3);
+            border-radius: 10px;
+            color: #00d4ff;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2),
+                        inset 0 0 10px rgba(0, 212, 255, 0.1);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .form-group input::placeholder {
+            color: rgba(0, 212, 255, 0.4);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 0;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .btn-set {
+            flex: 1;
+            padding: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: #0a1628;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-set:hover {
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.6),
+                        0 10px 20px rgba(0, 150, 200, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn-set:active {
+            transform: translateY(0);
+        }
+
+        .btn-logout {
+            flex: 1;
+            padding: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 2px solid rgba(255, 80, 80, 0.6);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: transparent;
+            color: #ff5050;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255, 80, 80, 0.1);
+            border-color: #ff5050;
+            box-shadow: 0 0 20px rgba(255, 80, 80, 0.2);
+        }
+
+        .success-message {
+            color: #4ade80;
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .success-message.show {
+            opacity: 1;
+        }
+
+        .info-box {
+            background: rgba(0, 212, 255, 0.08);
+            border-left: 3px solid #00d4ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .info-box strong {
+            color: #00d4ff;
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid rgba(0, 212, 255, 0.5);
+            color: #00d4ff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(0, 212, 255, 0.25);
+            border-color: #00d4ff;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .passcode-container,
+            .admin-panel {
+                padding: 30px 20px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .passcode-container h1,
+            .admin-panel h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Passcode Modal Container -->
+    <div class="container">
+        <!-- Passcode Screen -->
+        <div id="passcodeScreen" class="passcode-container">
+            <h1>🔐 Admin Panel</h1>
+            <p>Enter 6-digit passcode to access</p>
+            
+            <input 
+                type="password" 
+                id="passcodeInput" 
+                class="passcode-input" 
+                placeholder="000000" 
+                maxlength="6"
+            >
+            
+            <button class="btn btn-submit" onclick="verifyPasscode()">Verify</button>
+            
+            <div id="passcodeError" class="error-message"></div>
+        </div>
+
+        <!-- Admin Panel Screen -->
+        <div id="adminPanel" class="admin-panel">
+            <h1>⚙️ Balance Manager</h1>
+            <p class="subtitle">Manage user balances by email address</p>
+
+            <div id="successMessage" class="success-message"></div>
+
+            <div class="info-box">
+                <strong>📌 Instructions:</strong> Enter user email and set BTC, USDT, and ETH amounts, then click "Set Balance"
+            </div>
+
+            <!-- User Email -->
+            <div class="form-group">
+                <label for="userEmail">User Email</label>
+                <input 
+                    type="email" 
+                    id="userEmail" 
+                    placeholder="user@example.com"
+                >
+            </div>
+
+            <!-- Crypto Amounts -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="btcAmount">BTC Amount</label>
+                    <input 
+                        type="number" 
+                        id="btcAmount" 
+                        placeholder="0" 
+                        step="0.01"
+                        min="0"
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="usdtAmount">USDT Amount</label>
+                    <input 
+                        type="number" 
+                        id="usdtAmount" 
+                        placeholder="0" 
+                        step="0.01"
+                        min="0"
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="ethAmount">ETH Amount</label>
+                    <input 
+                        type="number" 
+                        id="ethAmount" 
+                        placeholder="0" 
+                        step="0.01"
+                        min="0"
+                    >
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="btn-group">
+                <button class="btn-set" onclick="setUserBalance()">Set Balance</button>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+
+            <!-- Navigation Link -->
+            <a href="index.html" class="nav-link">← Back to Main App</a>
+        </div>
+    </div>
+
+    <!-- LINK TO YOUR MAIN SCRIPT.JS -->
+    <script src="script.js"></script>
+
+    <script>
+        // Correct passcode
+        const ADMIN_PASSCODE = '229144';
+
+        // Verify passcode
+        function verifyPasscode() {
+            const passcodeInput = document.getElementById('passcodeInput');
+            const errorMsg = document.getElementById('passcodeError');
+            const passcode = passcodeInput.value.trim();
+
+            errorMsg.classList.remove('show');
+            errorMsg.textContent = '';
+
+            if (passcode === ADMIN_PASSCODE) {
+                // Correct passcode
+                document.getElementById('passcodeScreen').style.display = 'none';
+                document.getElementById('adminPanel').classList.add('show');
+                localStorage.setItem('adminLoggedIn', 'true');
+                console.log('✅ Admin logged in successfully');
+            } else {
+                // Incorrect passcode
+                errorMsg.textContent = '❌ Incorrect passcode. Try again.';
+                errorMsg.classList.add('show');
+                passcodeInput.value = '';
+                passcodeInput.focus();
+            }
+        }
+
+        // Set user balance - INTEGRATED WITH SCRIPT.JS
+        function setUserBalance() {
+            const userEmail = document.getElementById('userEmail').value.trim().toLowerCase();
+            const btcAmount = parseFloat(document.getElementById('btcAmount').value) || 0;
+            const usdtAmount = parseFloat(document.getElementById('usdtAmount').value) || 0;
+            const ethAmount = parseFloat(document.getElementById('ethAmount').value) || 0;
+            const successMsg = document.getElementById('successMessage');
+
+            successMsg.classList.remove('show');
+
+            // Validation
+            if (!userEmail || !userEmail.includes('@')) {
+                successMsg.textContent = '❌ Please enter a valid email address.';
+                successMsg.style.color = '#ff4444';
+                successMsg.style.borderColor = 'rgba(255, 68, 68, 0.3)';
+                successMsg.style.background = 'rgba(255, 68, 68, 0.08)';
+                successMsg.classList.add('show');
+                return;
+            }
+
+            // Check if AdminBalanceManager is available (from script.js)
+            if (typeof AdminBalanceManager === 'undefined') {
+                successMsg.textContent = '⚠️ Error: Admin manager not loaded. Make sure script.js is linked.';
+                successMsg.style.color = '#ff9900';
+                successMsg.style.borderColor = 'rgba(255, 153, 0, 0.3)';
+                successMsg.style.background = 'rgba(255, 153, 0, 0.08)';
+                successMsg.classList.add('show');
+                console.error('❌ AdminBalanceManager not found - script.js may not be loaded');
+                return;
+            }
+
+            // Set the balance using AdminBalanceManager from script.js
+            try {
+                AdminBalanceManager.setUserBalance(userEmail, btcAmount, usdtAmount, ethAmount);
+
+                // Show success message
+                successMsg.textContent = `✅ Balance set for ${userEmail}! BTC: ${btcAmount}, USDT: ${usdtAmount}, ETH: ${ethAmount}`;
+                successMsg.style.color = '#4ade80';
+                successMsg.style.borderColor = 'rgba(74, 222, 128, 0.3)';
+                successMsg.style.background = 'rgba(74, 222, 128, 0.08)';
+                successMsg.classList.add('show');
+
+                console.log(`✅ Balance updated successfully for ${userEmail}`);
+
+                // Clear inputs
+                document.getElementById('userEmail').value = '';
+                document.getElementById('btcAmount').value = '';
+                document.getElementById('usdtAmount').value = '';
+                document.getElementById('ethAmount').value = '';
+
+                // Auto hide success message after 4 seconds
+                setTimeout(() => {
+                    successMsg.classList.remove('show');
+                }, 4000);
+
+            } catch (error) {
+                console.error('❌ Error setting balance:', error);
+                successMsg.textContent = '❌ Error setting balance. Check console for details.';
+                successMsg.style.color = '#ff4444';
+                successMsg.style.borderColor = 'rgba(255, 68, 68, 0.3)';
+                successMsg.style.background = 'rgba(255, 68, 68, 0.08)';
+                successMsg.classList.add('show');
+            }
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('adminLoggedIn');
+            document.getElementById('adminPanel').classList.remove('show');
+            document.getElementById('passcodeScreen').style.display = 'block';
+            document.getElementById('passcodeInput').value = '';
+            document.getElementById('passcodeInput').focus();
+            console.log('✅ Admin logged out');
+        }
+
+        // Check if already logged in on page load
+        window.addEventListener('load', () => {
+            const isLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
+            if (isLoggedIn) {
+                document.getElementById('passcodeScreen').style.display = 'none';
+                document.getElementById('adminPanel').classList.add('show');
+                console.log('✅ Admin session restored');
+            } else {
+                document.getElementById('passcodeInput').focus();
+            }
+        });
+
+        // Allow Enter key to submit passcode
+        document.getElementById('passcodeInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                verifyPasscode();
+            }
+        });
+
+        // Allow Enter key in form fields
+        document.getElementById('userEmail').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('btcAmount').focus();
+            }
+        });
+
+        document.getElementById('ethAmount').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                setUserBalance();
+            }
+        });
+    </script>
+
+</body>
+</html>
