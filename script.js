@@ -19,40 +19,189 @@ let selectedWithdrawMethod = null;
 let selectedWithdrawCoin = null;
 let transactions = [];
 
-// ==================== ADMIN BALANCE MANAGER (EDITABLE/CUSTOMIZABLE) ====================
-// USE THIS BLOCK TO ASSIGN/LOAD ANY USER'S BALANCE BY EMAIL
-const AdminBalanceManager = {
-    // Set a specific user's balance by email
-    setUserBalance(userEmail, btcAmount = 0, usdtAmount = 0, ethAmount = 0) {
-        const balanceData = {
+// ==================== IMPROVED PERSISTENT STORAGE MANAGER ====================
+// This system simulates a backend by using localStorage with JSON storage
+const PersistentStorageManager = {
+    // Initialize storage with sample data if empty
+    initializeStorage() {
+        if (!localStorage.getItem('neuroWalletUsers')) {
+            // Create a storage structure for users
+            localStorage.setItem('neuroWalletUsers', JSON.stringify([]));
+        }
+        if (!localStorage.getItem('neuroWalletUserBalances')) {
+            // Master balance storage (simulates backend database)
+            localStorage.setItem('neuroWalletUserBalances', JSON.stringify({}));
+        }
+        console.log('✅ Storage initialized');
+    },
+
+    // Register a new user with credentials
+    registerUser(fullName, email, password) {
+        const users = JSON.parse(localStorage.getItem('neuroWalletUsers') || '[]');
+        const emailLower = email.toLowerCase();
+
+        // Check if user already exists
+        if (users.find(u => u.email === emailLower)) {
+            return { success: false, message: 'Email already registered' };
+        }
+
+        // Create new user
+        const newUser = {
+            id: Date.now().toString(),
+            fullName: fullName,
+            email: emailLower,
+            password: password, // In production, this should be hashed
+            createdAt: new Date().toISOString(),
+            verified: false
+        };
+
+        users.push(newUser);
+        localStorage.setItem('neuroWalletUsers', JSON.stringify(users));
+
+        // Initialize balance for new user
+        const balances = JSON.parse(localStorage.getItem('neuroWalletUserBalances') || '{}');
+        balances[emailLower] = {
+            BTC: 0,
+            USDT: 0,
+            ETH: 0,
+            lastUpdated: new Date().toISOString()
+        };
+        localStorage.setItem('neuroWalletUserBalances', JSON.stringify(balances));
+
+        // Initialize transactions storage
+        localStorage.setItem(`neuroWallet_transactions_${emailLower}`, JSON.stringify([]));
+        localStorage.setItem(`neuroWallet_promo_${emailLower}`, JSON.stringify({ used: false }));
+
+        console.log('✅ User registered:', newUser);
+        return { success: true, message: 'User registered successfully', user: newUser };
+    },
+
+    // Authenticate user
+    authenticateUser(email, password) {
+        const users = JSON.parse(localStorage.getItem('neuroWalletUsers') || '[]');
+        const emailLower = email.toLowerCase();
+
+        const user = users.find(u => u.email === emailLower);
+        
+        if (!user) {
+            return { success: false, message: 'User not found' };
+        }
+
+        if (user.password !== password) {
+            return { success: false, message: 'Invalid password' };
+        }
+
+        return { success: true, message: 'Authentication successful', user: user };
+    },
+
+    // Get user balance from persistent storage
+    getUserBalance(email) {
+        const emailLower = email.toLowerCase();
+        const balances = JSON.parse(localStorage.getItem('neuroWalletUserBalances') || '{}');
+        
+        if (balances[emailLower]) {
+            console.log(`✅ Balance retrieved for ${emailLower}:`, balances[emailLower]);
+            return balances[emailLower];
+        }
+
+        console.warn(`⚠️ No balance found for ${emailLower}`);
+        return null;
+    },
+
+    // Save user balance to persistent storage
+    saveUserBalance(email, balance) {
+        const emailLower = email.toLowerCase();
+        const balances = JSON.parse(localStorage.getItem('neuroWalletUserBalances') || '{}');
+
+        balances[emailLower] = {
+            BTC: balance.BTC || 0,
+            USDT: balance.USDT || 0,
+            ETH: balance.ETH || 0,
+            lastUpdated: new Date().toISOString()
+        };
+
+        localStorage.setItem('neuroWalletUserBalances', JSON.stringify(balances));
+        console.log(`✅ Balance saved for ${emailLower}:`, balances[emailLower]);
+    },
+
+    // Set custom balance for a user (Admin function)
+    setUserBalance(email, btcAmount = 0, usdtAmount = 0, ethAmount = 0) {
+        const emailLower = email.toLowerCase();
+        const balances = JSON.parse(localStorage.getItem('neuroWalletUserBalances') || '{}');
+
+        balances[emailLower] = {
             BTC: btcAmount,
             USDT: usdtAmount,
             ETH: ethAmount,
             lastUpdated: new Date().toISOString()
         };
 
-        localStorage.setItem(`neuroWallet_balance_${userEmail.toLowerCase()}`, JSON.stringify(balanceData));
-        console.log(`✅ Balance set for ${userEmail}:`, balanceData);
-        return balanceData;
+        localStorage.setItem('neuroWalletUserBalances', JSON.stringify(balances));
+        console.log(`✅ Balance set for ${emailLower}:`, balances[emailLower]);
+        return balances[emailLower];
+    },
+
+    // Add amount to existing user balance
+    addToUserBalance(email, btcAdd = 0, usdtAdd = 0, ethAdd = 0) {
+        const emailLower = email.toLowerCase();
+        const existing = this.getUserBalance(emailLower) || { BTC: 0, USDT: 0, ETH: 0 };
+        
+        return this.setUserBalance(
+            emailLower,
+            existing.BTC + btcAdd,
+            existing.USDT + usdtAdd,
+            existing.ETH + ethAdd
+        );
+    },
+
+    // Get all users and their balances
+    getAllUsersWithBalances() {
+        const users = JSON.parse(localStorage.getItem('neuroWalletUsers') || '[]');
+        const balances = JSON.parse(localStorage.getItem('neuroWalletUserBalances') || '{}');
+
+        return users.map(user => ({
+            ...user,
+            balance: balances[user.email] || { BTC: 0, USDT: 0, ETH: 0 }
+        }));
+    },
+
+    // Get transactions for a user
+    getUserTransactions(email) {
+        const emailLower = email.toLowerCase();
+        const transactions = localStorage.getItem(`neuroWallet_transactions_${emailLower}`);
+        return transactions ? JSON.parse(transactions) : [];
+    },
+
+    // Save transactions for a user
+    saveUserTransactions(email, transactions) {
+        const emailLower = email.toLowerCase();
+        localStorage.setItem(`neuroWallet_transactions_${emailLower}`, JSON.stringify(transactions));
+    },
+
+    // Check if promo code was used
+    isPromoCodeUsed(email) {
+        const emailLower = email.toLowerCase();
+        const promoData = localStorage.getItem(`neuroWallet_promo_${emailLower}`);
+        return promoData ? JSON.parse(promoData).used : false;
+    },
+
+    // Mark promo code as used
+    markPromoCodeUsed(email) {
+        const emailLower = email.toLowerCase();
+        localStorage.setItem(`neuroWallet_promo_${emailLower}`, JSON.stringify({ used: true, usedAt: new Date().toISOString() }));
+    }
+};
+
+// ==================== ADMIN BALANCE MANAGER (EDITABLE/CUSTOMIZABLE) ====================
+const AdminBalanceManager = {
+    // Set a specific user's balance by email
+    setUserBalance(userEmail, btcAmount = 0, usdtAmount = 0, ethAmount = 0) {
+        return PersistentStorageManager.setUserBalance(userEmail, btcAmount, usdtAmount, ethAmount);
     },
 
     // Get a specific user's balance by email
     getUserBalance(userEmail) {
-        const storedData = localStorage.getItem(`neuroWallet_balance_${userEmail.toLowerCase()}`);
-        
-        if (storedData) {
-            try {
-                const balanceData = JSON.parse(storedData);
-                console.log(`✅ Balance retrieved for ${userEmail}:`, balanceData);
-                return balanceData;
-            } catch (error) {
-                console.error('❌ Error parsing balance:', error);
-                return null;
-            }
-        }
-        
-        console.warn(`⚠️ No balance found for ${userEmail}`);
-        return null;
+        return PersistentStorageManager.getUserBalance(userEmail);
     },
 
     // Reset a user's balance to default
@@ -62,21 +211,17 @@ const AdminBalanceManager = {
 
     // Get all users with their balances
     getAllUsersBalances() {
-        const users = JSON.parse(localStorage.getItem('neuroWalletUsers') || '[]');
+        const users = PersistentStorageManager.getAllUsersWithBalances();
         const balances = {};
-
         users.forEach(user => {
-            const balance = this.getUserBalance(user.email);
-            balances[user.email] = balance || { BTC: 0, USDT: 0, ETH: 0 };
+            balances[user.email] = user.balance;
         });
-
         console.log('📊 All users balances:', balances);
         return balances;
     },
 
     // Bulk set balance for multiple users
     setMultipleUsersBalance(balanceUpdates) {
-        // balanceUpdates format: { 'email@example.com': { BTC: 1, USDT: 500, ETH: 2 }, ... }
         Object.entries(balanceUpdates).forEach(([email, amounts]) => {
             this.setUserBalance(email, amounts.BTC || 0, amounts.USDT || 0, amounts.ETH || 0);
         });
@@ -85,35 +230,26 @@ const AdminBalanceManager = {
 
     // Add amount to existing user balance
     addToUserBalance(userEmail, btcAdd = 0, usdtAdd = 0, ethAdd = 0) {
-        const existing = this.getUserBalance(userEmail) || { BTC: 0, USDT: 0, ETH: 0 };
-        return this.setUserBalance(
-            userEmail,
-            existing.BTC + btcAdd,
-            existing.USDT + usdtAdd,
-            existing.ETH + ethAdd
-        );
+        return PersistentStorageManager.addToUserBalance(userEmail, btcAdd, usdtAdd, ethAdd);
     }
 };
 
-// ==================== USAGE EXAMPLES (COPY & PASTE THESE IN BROWSER CONSOLE) ====================
+// ==================== USAGE EXAMPLES (COPY & PASTE IN BROWSER CONSOLE) ====================
 /*
 // SET BALANCE FOR A SPECIFIC USER BY EMAIL
 AdminBalanceManager.setUserBalance('user@example.com', 1, 5000, 2);
-// Result: Sets BTC=1, USDT=5000, ETH=2 for user@example.com
 
 // GET BALANCE FOR A SPECIFIC USER
 AdminBalanceManager.getUserBalance('user@example.com');
 
 // RESET A USER'S BALANCE
 AdminBalanceManager.resetUserBalance('user@example.com', 500);
-// Result: Sets BTC=0, USDT=500, ETH=0
 
 // GET ALL USERS AND THEIR BALANCES
 AdminBalanceManager.getAllUsersBalances();
 
 // ADD AMOUNT TO EXISTING USER BALANCE
 AdminBalanceManager.addToUserBalance('user@example.com', 0.5, 1000, 0);
-// Result: Adds 0.5 BTC, 1000 USDT, 0 ETH to existing balance
 
 // SET MULTIPLE USERS AT ONCE
 AdminBalanceManager.setMultipleUsersBalance({
@@ -121,61 +257,42 @@ AdminBalanceManager.setMultipleUsersBalance({
     'user2@example.com': { BTC: 0.5, USDT: 2500, ETH: 1 },
     'user3@example.com': { BTC: 2, USDT: 10000, ETH: 5 }
 });
+
+// VIEW ALL USERS
+AdminBalanceManager.getAllUsersBalances();
 */
 
 // ==================== PERSISTENT BALANCE MANAGER ====================
 const BalanceManager = {
-    // Save balance to localStorage for current user
+    // Save balance to persistent storage for current user
     saveBalance(balance) {
         if (!currentUser || !currentUser.email) {
             console.warn('⚠️ No user logged in. Cannot save balance.');
             return;
         }
 
-        const balanceData = {
-            BTC: balance.BTC,
-            USDT: balance.USDT,
-            ETH: balance.ETH,
-            lastUpdated: new Date().toISOString()
-        };
-
-        localStorage.setItem(`neuroWallet_balance_${currentUser.email}`, JSON.stringify(balanceData));
-        console.log('✅ Balance saved to localStorage:', balanceData);
+        PersistentStorageManager.saveUserBalance(currentUser.email, balance);
     },
 
-    // Restore balance from localStorage
+    // Restore balance from persistent storage
     restoreBalance() {
         if (!currentUser || !currentUser.email) {
             console.warn('⚠️ No user logged in. Cannot restore balance.');
             return null;
         }
 
-        const storedData = localStorage.getItem(`neuroWallet_balance_${currentUser.email}`);
+        const balanceData = PersistentStorageManager.getUserBalance(currentUser.email);
         
-        if (storedData) {
-            try {
-                const balanceData = JSON.parse(storedData);
-                console.log('✅ Balance restored from localStorage:', balanceData);
-                return {
-                    BTC: balanceData.BTC || 0,
-                    USDT: balanceData.USDT || 0,
-                    ETH: balanceData.ETH || 0
-                };
-            } catch (error) {
-                console.error('❌ Error parsing stored balance:', error);
-                return null;
-            }
+        if (balanceData) {
+            console.log('✅ Balance restored from storage:', balanceData);
+            return {
+                BTC: balanceData.BTC || 0,
+                USDT: balanceData.USDT || 0,
+                ETH: balanceData.ETH || 0
+            };
         }
 
         return null;
-    },
-
-    // Clear balance from localStorage (on logout)
-    clearBalance() {
-        if (currentUser && currentUser.email) {
-            localStorage.removeItem(`neuroWallet_balance_${currentUser.email}`);
-            console.log('✅ Balance cleared from localStorage');
-        }
     },
 
     // Update balance and save automatically
@@ -192,31 +309,51 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initializeApp() {
+    // Initialize persistent storage
+    PersistentStorageManager.initializeStorage();
+
     // Check if user is logged in
     const savedUser = localStorage.getItem('neuroWalletUser');
     if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        
-        // RESTORE BALANCE FROM STORAGE
-        const restoredBalance = BalanceManager.restoreBalance();
-        if (restoredBalance) {
-            userBalance = restoredBalance;
+        try {
+            currentUser = JSON.parse(savedUser);
+            
+            // RESTORE BALANCE FROM PERSISTENT STORAGE
+            const restoredBalance = BalanceManager.restoreBalance();
+            if (restoredBalance) {
+                userBalance = restoredBalance;
+                console.log('✅ Balance restored for returning user:', userBalance);
+            }
+            
+            // Restore transactions
+            const savedTransactions = PersistentStorageManager.getUserTransactions(currentUser.email);
+            transactions = savedTransactions || [];
+            
+            showDashboard();
+        } catch (error) {
+            console.error('❌ Error restoring user session:', error);
+            localStorage.removeItem('neuroWalletUser');
+            showLandingPage();
         }
-        
-        showDashboard();
     } else {
         showLandingPage();
     }
 
     // Event Listeners
-    document.getElementById('signInBtn').addEventListener('click', () => openModal('loginModal'));
-    document.getElementById('signUpBtn').addEventListener('click', () => openModal('signupModal'));
+    const signInBtn = document.getElementById('signInBtn');
+    const signUpBtn = document.getElementById('signUpBtn');
+    if (signInBtn) signInBtn.addEventListener('click', () => openModal('loginModal'));
+    if (signUpBtn) signUpBtn.addEventListener('click', () => openModal('signupModal'));
     
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
-    document.getElementById('signupForm').addEventListener('submit', handleSignup);
+    const loginForm = document.getElementById('loginForm');
+    const signupForm = document.getElementById('signupForm');
+    if (loginForm) loginForm.addEventListener('submit', handleLogin);
+    if (signupForm) signupForm.addEventListener('submit', handleSignup);
     
-    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-    document.getElementById('logoutBtnHeader').addEventListener('click', handleLogout);
+    const logoutBtn = document.getElementById('logoutBtn');
+    const logoutBtnHeader = document.getElementById('logoutBtnHeader');
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+    if (logoutBtnHeader) logoutBtnHeader.addEventListener('click', handleLogout);
 
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -254,11 +391,13 @@ function initializeApp() {
 // ==================== MODAL FUNCTIONS ====================
 function openModal(modalId) {
     closeAllModals();
-    document.getElementById(modalId).style.display = 'flex';
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'flex';
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
 }
 
 function closeAllModals() {
@@ -275,14 +414,18 @@ function switchModal(fromModal, toModal, e) {
 
 // ==================== PAGE VISIBILITY ====================
 function showLandingPage() {
-    document.getElementById('landingPage').style.display = 'flex';
-    document.getElementById('dashboard').style.display = 'none';
+    const landing = document.getElementById('landingPage');
+    const dashboard = document.getElementById('dashboard');
+    if (landing) landing.style.display = 'flex';
+    if (dashboard) dashboard.style.display = 'none';
 }
 
 function showDashboard() {
     closeAllModals();
-    document.getElementById('landingPage').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'flex';
+    const landing = document.getElementById('landingPage');
+    const dashboard = document.getElementById('dashboard');
+    if (landing) landing.style.display = 'none';
+    if (dashboard) dashboard.style.display = 'flex';
     updateUserWelcome();
     updateAllBalances();
     navigateToPage('home');
@@ -306,108 +449,116 @@ function togglePassword(fieldId) {
 function handleLogin(e) {
     e.preventDefault();
     
-    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-    const password = document.getElementById('loginPassword').value;
+    const emailInput = document.getElementById('loginEmail');
+    const passwordInput = document.getElementById('loginPassword');
+    const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+    const password = passwordInput ? passwordInput.value : '';
 
     // Clear errors
-    document.getElementById('loginEmailError').textContent = '';
-    document.getElementById('loginPasswordError').textContent = '';
+    const emailError = document.getElementById('loginEmailError');
+    const passwordError = document.getElementById('loginPasswordError');
+    if (emailError) emailError.textContent = '';
+    if (passwordError) passwordError.textContent = '';
 
     if (!email) {
-        document.getElementById('loginEmailError').textContent = 'Email is required';
+        if (emailError) emailError.textContent = 'Email is required';
         return;
     }
 
     if (!password) {
-        document.getElementById('loginPasswordError').textContent = 'Password is required';
+        if (passwordError) passwordError.textContent = 'Password is required';
         return;
     }
 
-    // Get users from localStorage
-    const users = JSON.parse(localStorage.getItem('neuroWalletUsers') || '[]');
-    const user = users.find(u => u.email === email);
+    // Authenticate user using persistent storage
+    const result = PersistentStorageManager.authenticateUser(email, password);
 
-    if (!user) {
-        document.getElementById('loginEmailError').textContent = 'User not found';
+    if (!result.success) {
+        if (result.message.includes('not found')) {
+            if (emailError) emailError.textContent = result.message;
+        } else {
+            if (passwordError) passwordError.textContent = result.message;
+        }
         return;
     }
 
-    if (user.password !== password) {
-        document.getElementById('loginPasswordError').textContent = 'Invalid password';
-        return;
-    }
-
-    // Success
-    currentUser = { fullName: user.fullName, email: user.email };
+    // Success - Login user
+    currentUser = { fullName: result.user.fullName, email: result.user.email };
     localStorage.setItem('neuroWalletUser', JSON.stringify(currentUser));
     
-    // RESTORE BALANCE FROM STORAGE OR SET DEFAULT
+    // RESTORE BALANCE FROM PERSISTENT STORAGE
     const restoredBalance = BalanceManager.restoreBalance();
     if (restoredBalance) {
         userBalance = restoredBalance;
-        console.log('✅ Restored balance for returning user:', userBalance);
+        console.log('✅ Restored balance for existing user:', userBalance);
     } else {
         // First time login - set default balance
         userBalance = { BTC: 0, USDT: 0, ETH: 0 };
         BalanceManager.saveBalance(userBalance);
-        console.log('✅ New user balance initialized and saved');
+        console.log('✅ New balance initialized and saved');
     }
     
     // Restore transactions
-    const savedTransactions = localStorage.getItem(`neuroWallet_transactions_${currentUser.email}`);
-    transactions = savedTransactions ? JSON.parse(savedTransactions) : [];
+    const savedTransactions = PersistentStorageManager.getUserTransactions(currentUser.email);
+    transactions = savedTransactions || [];
     
     showDashboard();
-    document.getElementById('loginForm').reset();
+    if (loginForm) loginForm.reset();
     showNotification(`Welcome back, ${currentUser.fullName}!`, 'success');
 }
 
 function handleSignup(e) {
     e.preventDefault();
     
-    const fullName = document.getElementById('fullName').value.trim();
-    const email = document.getElementById('signupEmail').value.trim().toLowerCase();
-    const password = document.getElementById('signupPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
+    const fullNameInput = document.getElementById('fullName');
+    const signupEmailInput = document.getElementById('signupEmail');
+    const signupPasswordInput = document.getElementById('signupPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+
+    const fullName = fullNameInput ? fullNameInput.value.trim() : '';
+    const email = signupEmailInput ? signupEmailInput.value.trim().toLowerCase() : '';
+    const password = signupPasswordInput ? signupPasswordInput.value : '';
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
 
     // Clear errors
-    document.getElementById('fullNameError').textContent = '';
-    document.getElementById('signupEmailError').textContent = '';
-    document.getElementById('signupPasswordError').textContent = '';
-    document.getElementById('confirmPasswordError').textContent = '';
+    const fullNameError = document.getElementById('fullNameError');
+    const signupEmailError = document.getElementById('signupEmailError');
+    const signupPasswordError = document.getElementById('signupPasswordError');
+    const confirmPasswordError = document.getElementById('confirmPasswordError');
+
+    if (fullNameError) fullNameError.textContent = '';
+    if (signupEmailError) signupEmailError.textContent = '';
+    if (signupPasswordError) signupPasswordError.textContent = '';
+    if (confirmPasswordError) confirmPasswordError.textContent = '';
 
     // Validation
     if (!fullName) {
-        document.getElementById('fullNameError').textContent = 'Full name is required';
+        if (fullNameError) fullNameError.textContent = 'Full name is required';
         return;
     }
 
     if (!email) {
-        document.getElementById('signupEmailError').textContent = 'Email is required';
+        if (signupEmailError) signupEmailError.textContent = 'Email is required';
         return;
     }
 
     if (!password || password.length < 6) {
-        document.getElementById('signupPasswordError').textContent = 'Password must be at least 6 characters';
+        if (signupPasswordError) signupPasswordError.textContent = 'Password must be at least 6 characters';
         return;
     }
 
     if (password !== confirmPassword) {
-        document.getElementById('confirmPasswordError').textContent = 'Passwords do not match';
+        if (confirmPasswordError) confirmPasswordError.textContent = 'Passwords do not match';
         return;
     }
 
-    // Check if email exists
-    const users = JSON.parse(localStorage.getItem('neuroWalletUsers') || '[]');
-    if (users.find(u => u.email === email)) {
-        document.getElementById('signupEmailError').textContent = 'Email already registered';
+    // Register user using persistent storage
+    const result = PersistentStorageManager.registerUser(fullName, email, password);
+
+    if (!result.success) {
+        if (signupEmailError) signupEmailError.textContent = result.message;
         return;
     }
-
-    // Create user
-    const newUser = { fullName, email, password };
-    users.push(newUser);
-    localStorage.setItem('neuroWalletUsers', JSON.stringify(users));
 
     // Auto-login
     currentUser = { fullName, email };
@@ -418,27 +569,32 @@ function handleSignup(e) {
     BalanceManager.saveBalance(userBalance);
     
     transactions = [];
+    PersistentStorageManager.saveUserTransactions(currentUser.email, transactions);
     
     showDashboard();
-    document.getElementById('signupForm').reset();
+    const signupForm = document.getElementById('signupForm');
+    if (signupForm) signupForm.reset();
     showNotification(`Account created! Welcome, ${fullName}!`, 'success');
 }
 
 function handleLogout() {
     if (confirm('Are you sure you want to logout?')) {
-        // Save balance before logout
+        // Save balance and transactions before logout
         if (currentUser) {
             BalanceManager.saveBalance(userBalance);
-            // Save transactions
-            localStorage.setItem(`neuroWallet_transactions_${currentUser.email}`, JSON.stringify(transactions));
+            PersistentStorageManager.saveUserTransactions(currentUser.email, transactions);
         }
         
         localStorage.removeItem('neuroWalletUser');
         currentUser = null;
         userBalance = { BTC: 0, USDT: 0, ETH: 0 };
         transactions = [];
-        document.getElementById('loginForm').reset();
-        document.getElementById('signupForm').reset();
+        
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        if (loginForm) loginForm.reset();
+        if (signupForm) signupForm.reset();
+        
         showLandingPage();
         showNotification('You have been logged out', 'info');
     }
@@ -513,71 +669,100 @@ function navigateToPage(pageName) {
 
 function updateAllBalances() {
     // Card balances
-    document.getElementById('btcDisplay').textContent = userBalance.BTC.toFixed(2) + ' BTC';
-    document.getElementById('btcUsdDisplay').textContent = '$' + (userBalance.BTC * btcPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
+    const btcDisplay = document.getElementById('btcDisplay');
+    const btcUsdDisplay = document.getElementById('btcUsdDisplay');
+    if (btcDisplay) btcDisplay.textContent = userBalance.BTC.toFixed(2) + ' BTC';
+    if (btcUsdDisplay) btcUsdDisplay.textContent = '$' + (userBalance.BTC * btcPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
 
-    document.getElementById('usdtDisplay').textContent = userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
-    document.getElementById('usdtUsdDisplay').textContent = '$' + (userBalance.USDT * usdtPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
+    const usdtDisplay = document.getElementById('usdtDisplay');
+    const usdtUsdDisplay = document.getElementById('usdtUsdDisplay');
+    if (usdtDisplay) usdtDisplay.textContent = userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
+    if (usdtUsdDisplay) usdtUsdDisplay.textContent = '$' + (userBalance.USDT * usdtPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
 
-    document.getElementById('ethDisplay').textContent = userBalance.ETH.toFixed(2) + ' ETH';
-    document.getElementById('ethUsdDisplay').textContent = '$' + (userBalance.ETH * ethPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
+    const ethDisplay = document.getElementById('ethDisplay');
+    const ethUsdDisplay = document.getElementById('ethUsdDisplay');
+    if (ethDisplay) ethDisplay.textContent = userBalance.ETH.toFixed(2) + ' ETH';
+    if (ethUsdDisplay) ethUsdDisplay.textContent = '$' + (userBalance.ETH * ethPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
 
     // Total
     const totalUSD = (userBalance.BTC * btcPrice) + (userBalance.USDT * usdtPrice) + (userBalance.ETH * ethPrice);
-    document.getElementById('totalUsdDisplay').textContent = '$' + totalUSD.toLocaleString('en-US', {maximumFractionDigits: 2});
+    const totalUsdDisplay = document.getElementById('totalUsdDisplay');
+    if (totalUsdDisplay) totalUsdDisplay.textContent = '$' + totalUSD.toLocaleString('en-US', {maximumFractionDigits: 2});
 
     // Table balances
-    document.getElementById('btcSpot').textContent = userBalance.BTC.toFixed(2) + ' BTC';
-    document.getElementById('btcAvail').textContent = userBalance.BTC.toFixed(2) + ' BTC';
-    document.getElementById('btcVal').textContent = '$' + (userBalance.BTC * btcPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
+    const btcSpot = document.getElementById('btcSpot');
+    const btcAvail = document.getElementById('btcAvail');
+    const btcVal = document.getElementById('btcVal');
+    if (btcSpot) btcSpot.textContent = userBalance.BTC.toFixed(2) + ' BTC';
+    if (btcAvail) btcAvail.textContent = userBalance.BTC.toFixed(2) + ' BTC';
+    if (btcVal) btcVal.textContent = '$' + (userBalance.BTC * btcPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
 
-    document.getElementById('usdtSpot').textContent = userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
-    document.getElementById('usdtAvail').textContent = userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
-    document.getElementById('usdtVal').textContent = '$' + (userBalance.USDT * usdtPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
+    const usdtSpot = document.getElementById('usdtSpot');
+    const usdtAvail = document.getElementById('usdtAvail');
+    const usdtVal = document.getElementById('usdtVal');
+    if (usdtSpot) usdtSpot.textContent = userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
+    if (usdtAvail) usdtAvail.textContent = userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
+    if (usdtVal) usdtVal.textContent = '$' + (userBalance.USDT * usdtPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
 
-    document.getElementById('ethSpot').textContent = userBalance.ETH.toFixed(2) + ' ETH';
-    document.getElementById('ethAvail').textContent = userBalance.ETH.toFixed(2) + ' ETH';
-    document.getElementById('ethVal').textContent = '$' + (userBalance.ETH * ethPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
+    const ethSpot = document.getElementById('ethSpot');
+    const ethAvail = document.getElementById('ethAvail');
+    const ethVal = document.getElementById('ethVal');
+    if (ethSpot) ethSpot.textContent = userBalance.ETH.toFixed(2) + ' ETH';
+    if (ethAvail) ethAvail.textContent = userBalance.ETH.toFixed(2) + ' ETH';
+    if (ethVal) ethVal.textContent = '$' + (userBalance.ETH * ethPrice).toLocaleString('en-US', {maximumFractionDigits: 2});
 
     // Staking page
-    document.getElementById('btcStakingAmount').textContent = 'Your Balance: ' + userBalance.BTC.toFixed(2) + ' BTC';
-    document.getElementById('usdtStakingAmount').textContent = 'Your Balance: ' + userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
-    document.getElementById('ethStakingAmount').textContent = 'Your Balance: ' + userBalance.ETH.toFixed(2) + ' ETH';
+    const btcStakingAmount = document.getElementById('btcStakingAmount');
+    const usdtStakingAmount = document.getElementById('usdtStakingAmount');
+    const ethStakingAmount = document.getElementById('ethStakingAmount');
+    if (btcStakingAmount) btcStakingAmount.textContent = 'Your Balance: ' + userBalance.BTC.toFixed(2) + ' BTC';
+    if (usdtStakingAmount) usdtStakingAmount.textContent = 'Your Balance: ' + userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
+    if (ethStakingAmount) ethStakingAmount.textContent = 'Your Balance: ' + userBalance.ETH.toFixed(2) + ' ETH';
 
     // Withdraw coin balances
-    document.getElementById('coinBalanceBTC').textContent = userBalance.BTC.toFixed(2) + ' BTC';
-    document.getElementById('coinBalanceUSDT').textContent = userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
-    document.getElementById('coinBalanceETH').textContent = userBalance.ETH.toFixed(2) + ' ETH';
+    const coinBalanceBTC = document.getElementById('coinBalanceBTC');
+    const coinBalanceUSDT = document.getElementById('coinBalanceUSDT');
+    const coinBalanceETH = document.getElementById('coinBalanceETH');
+    if (coinBalanceBTC) coinBalanceBTC.textContent = userBalance.BTC.toFixed(2) + ' BTC';
+    if (coinBalanceUSDT) coinBalanceUSDT.textContent = userBalance.USDT.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
+    if (coinBalanceETH) coinBalanceETH.textContent = userBalance.ETH.toFixed(2) + ' ETH';
 }
 
 // ==================== DEPOSIT FUNCTIONS ====================
 function openDepositModal() {
     closeAllModals();
-    document.getElementById('depositModal').style.display = 'flex';
+    const modal = document.getElementById('depositModal');
+    if (modal) modal.style.display = 'flex';
 }
 
 function closeDepositModal() {
-    document.getElementById('depositModal').style.display = 'none';
+    const modal = document.getElementById('depositModal');
+    if (modal) modal.style.display = 'none';
 }
 
 function copyAddress() {
     const addressText = document.getElementById('depositAddressText');
     if (addressText) {
         const address = addressText.textContent;
-        navigator.clipboard.writeText(address);
-        showNotification('Address copied to clipboard!', 'success');
+        navigator.clipboard.writeText(address).then(() => {
+            showNotification('Address copied to clipboard!', 'success');
+        }).catch(() => {
+            showNotification('Failed to copy address', 'error');
+        });
     }
 }
 
 // ==================== WITHDRAW FUNCTIONS ====================
 function openWithdrawModal() {
     closeAllModals();
-    document.getElementById('withdrawModal').style.display = 'flex';
+    const modal = document.getElementById('withdrawModal');
+    if (modal) modal.style.display = 'flex';
     goToWithdrawStep(1);
 }
 
 function closeWithdrawModal() {
-    document.getElementById('withdrawModal').style.display = 'none';
+    const modal = document.getElementById('withdrawModal');
+    if (modal) modal.style.display = 'none';
 }
 
 function goToWithdrawStep(step) {
@@ -609,9 +794,8 @@ function selectWithdrawMethod(method) {
 function selectWithdrawCoin(coin) {
     selectedWithdrawCoin = coin;
     const titleEl = document.getElementById('selectedCoinTitle');
-    if (titleEl) titleEl.textContent = `${coin} WALLET ADDRESS`;
-    
     const currencyEl = document.getElementById('withdrawCurrency');
+    if (titleEl) titleEl.textContent = `${coin} WALLET ADDRESS`;
     if (currencyEl) currencyEl.textContent = coin;
     
     goToWithdrawStep(3);
@@ -643,19 +827,22 @@ function updateWithdrawDisplay() {
     const receive = Math.max(0, amount - (fee / price));
 
     const feeEl = document.getElementById('networkFee');
-    if (feeEl) feeEl.textContent = `${(fee / price).toFixed(6)} ${selectedWithdrawCoin}`;
-    
     const totalFeeEl = document.getElementById('totalFee');
-    if (totalFeeEl) totalFeeEl.textContent = `${(fee / price).toFixed(6)} ${selectedWithdrawCoin}`;
-    
     const receiveEl = document.getElementById('finalReceiveAmount');
+    
+    if (feeEl) feeEl.textContent = `${(fee / price).toFixed(6)} ${selectedWithdrawCoin}`;
+    if (totalFeeEl) totalFeeEl.textContent = `${(fee / price).toFixed(6)} ${selectedWithdrawCoin}`;
     if (receiveEl) receiveEl.textContent = `${receive.toFixed(6)} ${selectedWithdrawCoin}`;
 }
 
 function processWithdraw() {
-    const amount = parseFloat(document.getElementById('withdrawAmount').value) || 0;
-    const address = document.getElementById('walletAddress').value.trim();
-    const network = document.getElementById('networkSelectWithdraw').value;
+    const amountInput = document.getElementById('withdrawAmount');
+    const addressInput = document.getElementById('walletAddress');
+    const networkSelect = document.getElementById('networkSelectWithdraw');
+
+    const amount = amountInput ? parseFloat(amountInput.value) : 0;
+    const address = addressInput ? addressInput.value.trim() : '';
+    const network = networkSelect ? networkSelect.value : '';
 
     if (!amount || !address || !network) {
         showNotification('Please fill in all fields', 'error');
@@ -686,9 +873,13 @@ function showActivationModal() {
 
 // ==================== CONVERT FUNCTIONS ====================
 function updateConvertRate() {
-    const fromCrypto = document.getElementById('fromCrypto').value;
-    const toCrypto = document.getElementById('toCrypto').value;
-    const amount = parseFloat(document.getElementById('convertAmount').value) || 0;
+    const fromCryptoSelect = document.getElementById('fromCrypto');
+    const toCryptoSelect = document.getElementById('toCrypto');
+    const convertAmountInput = document.getElementById('convertAmount');
+
+    const fromCrypto = fromCryptoSelect ? fromCryptoSelect.value : 'BTC';
+    const toCrypto = toCryptoSelect ? toCryptoSelect.value : 'USDT';
+    const amount = convertAmountInput ? parseFloat(convertAmountInput.value) : 0;
 
     const prices = {
         'BTC': btcPrice,
@@ -700,13 +891,18 @@ function updateConvertRate() {
     const toPrice = prices[toCrypto];
     const convertedAmount = (amount * fromPrice) / toPrice;
 
-    document.getElementById('convertReceive').value = convertedAmount.toFixed(8);
+    const convertReceiveInput = document.getElementById('convertReceive');
+    if (convertReceiveInput) convertReceiveInput.value = convertedAmount.toFixed(8);
 }
 
 function handleConvert() {
-    const fromCrypto = document.getElementById('fromCrypto').value;
-    const toCrypto = document.getElementById('toCrypto').value;
-    const amount = parseFloat(document.getElementById('convertAmount').value) || 0;
+    const fromCryptoSelect = document.getElementById('fromCrypto');
+    const toCryptoSelect = document.getElementById('toCrypto');
+    const convertAmountInput = document.getElementById('convertAmount');
+
+    const fromCrypto = fromCryptoSelect ? fromCryptoSelect.value : 'BTC';
+    const toCrypto = toCryptoSelect ? toCryptoSelect.value : 'USDT';
+    const amount = convertAmountInput ? parseFloat(convertAmountInput.value) : 0;
 
     if (!amount) {
         showNotification('Please enter an amount', 'error');
@@ -738,8 +934,9 @@ function handleConvert() {
     showNotification(`Successfully converted ${amount.toFixed(6)} ${fromCrypto} to ${convertedAmount.toFixed(6)} ${toCrypto}`, 'success');
     
     // Reset form
-    document.getElementById('convertAmount').value = '';
-    document.getElementById('convertReceive').value = '';
+    if (convertAmountInput) convertAmountInput.value = '';
+    const convertReceiveInput = document.getElementById('convertReceive');
+    if (convertReceiveInput) convertReceiveInput.value = '';
 }
 
 // ==================== STAKING FUNCTIONS ====================
@@ -753,7 +950,8 @@ function handleTransferSubmit(e) {
     e.preventDefault();
     closeAllModals();
     showNotification('Transfer will be processed after KYC verification (56 hours)', 'warning');
-    document.getElementById('transferForm').reset();
+    const transferForm = document.getElementById('transferForm');
+    if (transferForm) transferForm.reset();
 }
 
 // ==================== PROMO CODE ====================
@@ -764,10 +962,16 @@ function applyPromoCode() {
     if (!promoInput) return;
     
     const code = promoInput.value.trim().toUpperCase();
-    promoError.textContent = '';
+    if (promoError) promoError.textContent = '';
 
     if (!code) {
-        promoError.textContent = 'Please enter a promo code';
+        if (promoError) promoError.textContent = 'Please enter a promo code';
+        return;
+    }
+
+    // Check if promo code was already used
+    if (PersistentStorageManager.isPromoCodeUsed(currentUser.email)) {
+        if (promoError) promoError.textContent = 'This promo code has already been used';
         return;
     }
 
@@ -776,21 +980,23 @@ function applyPromoCode() {
         userBalance.USDT += PROMO_REWARD_USDT;
         BalanceManager.saveBalance(userBalance);
         updateAllBalances();
+        PersistentStorageManager.markPromoCodeUsed(currentUser.email);
         addTransaction(`Promo code applied: ${PROMO_REWARD_USDT.toLocaleString()} USDT`, 'promo');
         
         // Clear and close
         promoInput.value = '';
-        promoError.textContent = '';
+        if (promoError) promoError.textContent = '';
         showNotification(`✨ Promo code applied! You received $${PROMO_REWARD_USDT.toLocaleString()} USDT`, 'success');
         
         // Auto navigate to home
         setTimeout(() => {
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            document.querySelector('.nav-item[data-page="home"]').classList.add('active');
+            const homeNav = document.querySelector('.nav-item[data-page="home"]');
+            if (homeNav) homeNav.classList.add('active');
             navigateToPage('home');
         }, 1500);
     } else {
-        promoError.textContent = 'Invalid promo code';
+        if (promoError) promoError.textContent = 'Invalid promo code';
     }
 }
 
@@ -806,9 +1012,9 @@ function addTransaction(description, type) {
         date: now.toLocaleDateString()
     });
 
-    // Save transactions to localStorage
+    // Save transactions to persistent storage
     if (currentUser && currentUser.email) {
-        localStorage.setItem(`neuroWallet_transactions_${currentUser.email}`, JSON.stringify(transactions));
+        PersistentStorageManager.saveUserTransactions(currentUser.email, transactions);
     }
 
     updateTransactionsList();
@@ -912,4 +1118,4 @@ style.textContent = `
         }
     }
 `;
-document.head.appendChild(style);a
+document.head.appendChild(style);
