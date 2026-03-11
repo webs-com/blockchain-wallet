@@ -1,216 +1,99 @@
-// Crypto Logo URLs (Using reliable public APIs)
+// ==================== CRYPTO LOGOS WITH FALLBACK SUPPORT ====================
+
+// Logo data with multiple fallback sources
 const cryptoLogos = {
     BTC: {
         symbol: 'BTC',
         name: 'Bitcoin',
-        logo: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png',
+        logos: [
+            'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+            'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@d841b0e/128/color/btc.png',
+            'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/btc.png',
+            'https://cryptologos.cc/logos/bitcoin-btc-logo.png'
+        ],
         fallback: '₿'
     },
     ETH: {
         symbol: 'ETH',
         name: 'Ethereum',
-        logo: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
+        logos: [
+            'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+            'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@d841b0e/128/color/eth.png',
+            'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/eth.png',
+            'https://cryptologos.cc/logos/ethereum-eth-logo.png'
+        ],
         fallback: 'Ξ'
     },
     USDT: {
         symbol: 'USDT',
         name: 'Tether',
-        logo: 'https://cryptologos.cc/logos/tether-usdt-logo.png',
+        logos: [
+            'https://assets.coingecko.com/coins/images/325/large/Tether.png',
+            'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@d841b0e/128/color/usdt.png',
+            'https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png',
+            'https://cryptologos.cc/logos/tether-usdt-logo.png'
+        ],
         fallback: 'T'
     }
 };
 
-// Function to insert logo to a specific element
-function insertLogoToElement(elementId, cryptoSymbol) {
+// All logo element IDs to load
+const logoElementIds = {
+    'btc-balance-icon': 'BTC',
+    'eth-balance-icon': 'ETH',
+    'usdt-balance-icon': 'USDT',
+    'asset-btc-icon': 'BTC',
+    'asset-eth-icon': 'ETH',
+    'asset-usdt-icon': 'USDT',
+    'withdraw-btc-icon': 'BTC',
+    'withdraw-eth-icon': 'ETH',
+    'withdraw-usdt-icon': 'USDT',
+    'staking-btc-icon': 'BTC',
+    'staking-eth-icon': 'ETH',
+    'staking-usdt-icon': 'USDT'
+};
+
+// Load a single logo with retry mechanism
+function loadCryptoLogo(elementId, cryptoSymbol) {
     const element = document.getElementById(elementId);
-    if (!element) return;
-
-    if (!cryptoLogos[cryptoSymbol]) return;
-
-    const logo = cryptoLogos[cryptoSymbol];
-    
-    // Create image element
-    const img = document.createElement('img');
-    img.src = logo.logo;
-    img.alt = logo.name;
-    img.title = logo.name;
-    img.style.cssText = `
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        display: block;
-    `;
-
-    // Handle image load error - fallback to emoji
-    img.onerror = function() {
-        element.textContent = logo.fallback;
-        element.style.cssText = `
-            font-size: 20px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-    };
-
-    // Handle image load success
-    img.onload = function() {
-        // Image loaded successfully, do nothing special
-    };
-
-    // Clear previous content and append image
-    element.innerHTML = '';
-    element.appendChild(img);
-}
-
-// Function to insert logos into all balance cards
-function insertBalanceCardLogos() {
-    insertLogoToElement('btc-balance-icon', 'BTC');
-    insertLogoToElement('usdt-balance-icon', 'USDT');
-    insertLogoToElement('eth-balance-icon', 'ETH');
-}
-
-// Function to insert logos into asset table
-function insertAssetTableLogos() {
-    insertLogoToElement('asset-btc-icon', 'BTC');
-    insertLogoToElement('asset-usdt-icon', 'USDT');
-    insertLogoToElement('asset-eth-icon', 'ETH');
-}
-
-// Function to insert logos into withdraw modal
-function insertWithdrawModalLogos() {
-    insertLogoToElement('withdraw-btc-icon', 'BTC');
-    insertLogoToElement('withdraw-usdt-icon', 'USDT');
-    insertLogoToElement('withdraw-eth-icon', 'ETH');
-}
-
-// Function to insert logos into staking cards
-function insertStakingCardLogos() {
-    insertLogoToElement('staking-btc-icon', 'BTC');
-    insertLogoToElement('staking-usdt-icon', 'USDT');
-    insertLogoToElement('staking-eth-icon', 'ETH');
-}
-
-// Main function to load all crypto logos
-function loadAllCryptoLogos() {
-    // Use a small delay to ensure DOM is fully ready
-    if (document.readyState === 'loading') {
-        // DOM is still loading
-        setTimeout(loadAllCryptoLogos, 100);
+    if (!element) {
+        console.warn(`⚠️ Element not found: ${elementId}`);
         return;
     }
 
-    // Load all logo categories
-    insertBalanceCardLogos();
-    insertAssetTableLogos();
-    insertWithdrawModalLogos();
-    insertStakingCardLogos();
-}
-
-// Wait for DOM to be fully loaded
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadAllCryptoLogos);
-} else {
-    // DOM is already loaded
-    loadAllCryptoLogos();
-}
-
-// Alternative: Load logos when window is fully loaded (images, etc.)
-window.addEventListener('load', loadAllCryptoLogos);
-
-// Retry mechanism for failed image loads
-function retryFailedLogos() {
-    const logoElements = {
-        'btc-balance-icon': 'BTC',
-        'eth-balance-icon': 'ETH',
-        'usdt-balance-icon': 'USDT',
-        'asset-btc-icon': 'BTC',
-        'asset-eth-icon': 'ETH',
-        'asset-usdt-icon': 'USDT',
-        'withdraw-btc-icon': 'BTC',
-        'withdraw-eth-icon': 'ETH',
-        'withdraw-usdt-icon': 'USDT',
-        'staking-btc-icon': 'BTC',
-        'staking-eth-icon': 'ETH',
-        'staking-usdt-icon': 'USDT'
-    };
-
-    // Check if any element is still showing fallback text instead of image
-    for (const [elementId, symbol] of Object.entries(logoElements)) {
-        const element = document.getElementById(elementId);
-        if (element && !element.querySelector('img')) {
-            // Re-insert logo if image not found
-            insertLogoToElement(elementId, symbol);
-        }
+    const logoData = cryptoLogos[cryptoSymbol];
+    if (!logoData) {
+        console.warn(`⚠️ Logo data not found for: ${cryptoSymbol}`);
+        return;
     }
-}
-
-// Retry failed logos after 3 seconds
-setTimeout(retryFailedLogos, 3000);
-
-// Fallback API endpoints in case main API fails
-const fallbackLogos = {
-    BTC: {
-        symbol: 'BTC',
-        name: 'Bitcoin',
-        logos: [
-            'https://cryptologos.cc/logos/bitcoin-btc-logo.png',
-            'https://raw.githubusercontent.com/ErikThiart/cryptocurrency-icons/master/32/icon/btc.png',
-            'https://assets.coingecko.com/coins/images/1/large/bitcoin.png'
-        ],
-        fallback: '₿'
-    },
-    ETH: {
-        symbol: 'ETH',
-        name: 'Ethereum',
-        logos: [
-            'https://cryptologos.cc/logos/ethereum-eth-logo.png',
-            'https://raw.githubusercontent.com/ErikThiart/cryptocurrency-icons/master/32/icon/eth.png',
-            'https://assets.coingecko.com/coins/images/279/large/ethereum.png'
-        ],
-        fallback: 'Ξ'
-    },
-    USDT: {
-        symbol: 'USDT',
-        name: 'Tether',
-        logos: [
-            'https://cryptologos.cc/logos/tether-usdt-logo.png',
-            'https://raw.githubusercontent.com/ErikThiart/cryptocurrency-icons/master/32/icon/usdt.png',
-            'https://assets.coingecko.com/coins/images/325/large/Tether.png'
-        ],
-        fallback: 'T'
-    }
-};
-
-// Enhanced function with fallback URLs
-function insertLogoWithFallback(elementId, cryptoSymbol) {
-    const element = document.getElementById(elementId);
-    if (!element) return;
-
-    const cryptoData = fallbackLogos[cryptoSymbol];
-    if (!cryptoData) return;
 
     let logoIndex = 0;
 
-    function tryLoadLogo() {
-        if (logoIndex >= cryptoData.logos.length) {
-            // All URLs failed, use fallback
-            element.textContent = cryptoData.fallback;
+    function tryLoadNextLogo() {
+        if (logoIndex >= logoData.logos.length) {
+            // All URLs failed, use fallback emoji
+            console.warn(`⚠️ All logo URLs failed for ${cryptoSymbol}, using fallback emoji`);
+            element.innerHTML = '';
+            element.textContent = logoData.fallback;
             element.style.cssText = `
-                font-size: 20px;
+                font-size: 24px;
                 font-weight: bold;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                width: 100%;
+                height: 100%;
             `;
             return;
         }
 
-        const logoUrl = cryptoData.logos[logoIndex];
+        const logoUrl = logoData.logos[logoIndex];
         const img = document.createElement('img');
-        img.src = logoUrl;
-        img.alt = cryptoData.name;
-        img.title = cryptoData.name;
+        
+        // Add cache buster to prevent caching issues
+        img.src = logoUrl + '?t=' + Date.now();
+        img.alt = logoData.name;
+        img.title = logoData.name;
         img.style.cssText = `
             width: 100%;
             height: 100%;
@@ -219,164 +102,131 @@ function insertLogoWithFallback(elementId, cryptoSymbol) {
         `;
 
         img.onload = function() {
-            // Image loaded successfully
+            console.log(`✅ Logo loaded for ${cryptoSymbol} from: ${logoUrl}`);
             element.innerHTML = '';
             element.appendChild(img);
         };
 
         img.onerror = function() {
-            // Try next URL
+            console.warn(`❌ Failed to load ${cryptoSymbol} from: ${logoUrl}`);
             logoIndex++;
-            tryLoadLogo();
+            tryLoadNextLogo();
         };
+
+        // Set timeout for slow networks
+        const timeout = setTimeout(() => {
+            console.warn(`⏱️ Logo load timeout for ${cryptoSymbol}`);
+            logoIndex++;
+            tryLoadNextLogo();
+        }, 5000);
+
+        img.addEventListener('load', () => clearTimeout(timeout));
+        img.addEventListener('error', () => clearTimeout(timeout));
 
         element.innerHTML = '';
         element.appendChild(img);
     }
 
-    tryLoadLogo();
+    tryLoadNextLogo();
 }
 
-// Function to load all logos with fallback support
-function loadAllLogosWithFallback() {
-    if (document.readyState === 'loading') {
-        setTimeout(loadAllLogosWithFallback, 100);
-        return;
+// Load all logos
+function loadAllCryptoLogos() {
+    console.log('📦 Starting to load crypto logos...');
+    
+    for (const [elementId, symbol] of Object.entries(logoElementIds)) {
+        loadCryptoLogo(elementId, symbol);
     }
-
-    const logoElements = {
-        'btc-balance-icon': 'BTC',
-        'eth-balance-icon': 'ETH',
-        'usdt-balance-icon': 'USDT',
-        'asset-btc-icon': 'BTC',
-        'asset-eth-icon': 'ETH',
-        'asset-usdt-icon': 'USDT',
-        'withdraw-btc-icon': 'BTC',
-        'withdraw-eth-icon': 'ETH',
-        'withdraw-usdt-icon': 'USDT',
-        'staking-btc-icon': 'BTC',
-        'staking-eth-icon': 'ETH',
-        'staking-usdt-icon': 'USDT'
-    };
-
-    for (const [elementId, symbol] of Object.entries(logoElements)) {
-        insertLogoWithFallback(elementId, symbol);
-    }
+    
+    console.log('✅ Logo loading initiated for all elements');
 }
 
-// Initialize with fallback support
-loadAllLogosWithFallback();
-
-// Prevent re-initialization
-let logosInitialized = false;
-
-document.addEventListener('DOMContentLoaded', () => {
-    if (!logosInitialized) {
-        logosInitialized = true;
-        loadAllLogosWithFallback();
-    }
-});
-
-window.addEventListener('load', () => {
-    if (!logosInitialized) {
-        logosInitialized = true;
-        loadAllLogosWithFallback();
-    }
-});
-
-// Export functions for manual use if needed
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        cryptoLogos,
-        fallbackLogos,
-        insertLogoToElement,
-        insertLogoWithFallback,
-        loadAllCryptoLogos,
-        loadAllLogosWithFallback,
-        insertBalanceCardLogos,
-        insertAssetTableLogos,
-        insertWithdrawModalLogos,
-        insertStakingCardLogos,
-        retryFailedLogos
-    };
-}
-
-// Observer for dynamically added elements
-const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-            // Check if any new logo containers were added
-            mutation.addedNodes.forEach((node) => {
-                if (node.nodeType === 1) { // Element node
-                    // Re-initialize logos for new elements
-                    setTimeout(retryFailedLogos, 100);
-                }
-            });
+// Retry failed logos
+function retryFailedLogos() {
+    console.log('🔄 Retrying failed logos...');
+    
+    for (const [elementId, symbol] of Object.entries(logoElementIds)) {
+        const element = document.getElementById(elementId);
+        if (element && !element.querySelector('img')) {
+            // No image found, retry loading
+            console.log(`🔄 Retrying logo for: ${elementId}`);
+            loadCryptoLogo(elementId, symbol);
         }
-    });
-});
-
-// Start observing the document for changes
-observer.observe(document.body, {
-    childList: true,
-    subtree: true
-});
-
-// Utility function to get logo data
-function getLogoCryptoData(symbol) {
-    return cryptoLogos[symbol] || null;
+    }
 }
 
-// Utility function to check if logo is loaded
-function isLogoLoaded(elementId) {
-    const element = document.getElementById(elementId);
-    if (!element) return false;
-    return element.querySelector('img') !== null;
-}
-
-// Utility function to reload a specific logo
+// Reload a specific logo manually
 function reloadLogo(elementId, symbol) {
     const element = document.getElementById(elementId);
     if (element) {
         element.innerHTML = '';
-        insertLogoWithFallback(elementId, symbol);
+        console.log(`🔄 Reloading logo: ${elementId}`);
+        loadCryptoLogo(elementId, symbol);
     }
 }
 
-// Utility function to reload all logos
+// Reload all logos manually
 function reloadAllLogos() {
-    const logoElements = {
-        'btc-balance-icon': 'BTC',
-        'eth-balance-icon': 'ETH',
-        'usdt-balance-icon': 'USDT',
-        'asset-btc-icon': 'BTC',
-        'asset-eth-icon': 'ETH',
-        'asset-usdt-icon': 'USDT',
-        'withdraw-btc-icon': 'BTC',
-        'withdraw-eth-icon': 'ETH',
-        'withdraw-usdt-icon': 'USDT',
-        'staking-btc-icon': 'BTC',
-        'staking-eth-icon': 'ETH',
-        'staking-usdt-icon': 'USDT'
-    };
+    console.log('🔄 Reloading all logos...');
+    loadAllCryptoLogos();
+}
 
-    for (const [elementId, symbol] of Object.entries(logoElements)) {
-        reloadLogo(elementId, symbol);
+// ==================== INITIALIZATION ====================
+
+// Wait for DOM to be ready
+function initializeLogos() {
+    if (document.readyState === 'loading') {
+        // DOM still loading, wait
+        console.log('⏳ Waiting for DOM to be ready...');
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('✅ DOM ready, loading logos');
+            loadAllCryptoLogos();
+            
+            // Retry after 2 seconds
+            setTimeout(retryFailedLogos, 2000);
+        });
+    } else {
+        // DOM already loaded
+        console.log('✅ DOM already ready, loading logos');
+        loadAllCryptoLogos();
+        
+        // Retry after 2 seconds
+        setTimeout(retryFailedLogos, 2000);
     }
 }
 
-// Add error handler for network issues
+// Initialize on script load
+initializeLogos();
+
+// Also initialize when window loads
+window.addEventListener('load', () => {
+    console.log('🔄 Window load event, checking logos...');
+    setTimeout(retryFailedLogos, 500);
+});
+
+// Retry on network restore
 window.addEventListener('online', () => {
-    console.log('Network connection restored, reloading logos...');
+    console.log('🌐 Network restored, reloading logos...');
     reloadAllLogos();
 });
 
+// Handle network offline
 window.addEventListener('offline', () => {
-    console.log('Network connection lost');
+    console.log('❌ Network offline');
 });
 
-// Log initialization status
-console.log('NeuroWallet Crypto Logos Script Loaded');
-console.log('Available cryptocurrencies:', Object.keys(cryptoLogos));
-console.log('Total logo containers to load:', 12);
+// Export functions for console access
+window.loadAllCryptoLogos = loadAllCryptoLogos;
+window.retryFailedLogos = retryFailedLogos;
+window.reloadLogo = reloadLogo;
+window.reloadAllLogos = reloadAllLogos;
 
+// Log status
+console.log('✅ Crypto Logos Script Loaded');
+console.log('📊 Available cryptocurrencies:', Object.keys(cryptoLogos));
+console.log('📍 Total logo containers to load:', Object.keys(logoElementIds).length);
+console.log('💡 Use these commands in console:');
+console.log('   - loadAllCryptoLogos()');
+console.log('   - retryFailedLogos()');
+console.log('   - reloadLogo(elementId, symbol)');
+console.log('   - reloadAllLogos()');
