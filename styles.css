@@ -1231,19 +1231,20 @@ body {
 
 .activation-header h3 {
     margin-top: 15px;
-    font-size: 16px;
+    font-size: 19px;
 }
 
 .activation-content p {
     margin-bottom: 8px;
     line-height: 1.6;
     color: var(--text-secondary);
+    font-size: 13px;
 }
 
 .waiting-text {
     color: var(--accent-yellow);
     font-weight: 500;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .verification-status {
