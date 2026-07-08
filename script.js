@@ -973,7 +973,7 @@ async function applyPromoCode() {
         return;
     }
 
-    if (code === PROMO_CODE) {
+    if (PROMO_CODE.includes(code)) {
         // Apply reward
         userBalance.USDT += PROMO_REWARD_USDT;
         await BalanceManager.saveUserBalance(currentUser.email, userBalance);
