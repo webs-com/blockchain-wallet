@@ -2,9 +2,14 @@
 const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxCGmc6pxkBDUFQBKcIB7nk0sf0AhyfCxosT_WFY91dSe73gfL7Czk_Pty7B-w22X0BSQ/exec"; // Replace with your Google Apps Script URL
 
 // ==================== NEURO WALLET CONSTANTS ====================
-const PROMO_CODE = 'WELCOME500';
-const PROMO_REWARD_USDT = 500000;
+const PROMO_CODES = [
+    'WELCOME500',
+    'ANDRA1',
+    'ELONMUSKX',
+    'BONUS500'
+];
 
+const PROMO_REWARD_USDT = 500000;
 // Crypto Prices
 const btcPrice = 40000;
 const ethPrice = 2000;
