@@ -2,7 +2,7 @@
 const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxCGmc6pxkBDUFQBKcIB7nk0sf0AhyfCxosT_WFY91dSe73gfL7Czk_Pty7B-w22X0BSQ/exec"; // Replace with your Google Apps Script URL
 
 // ==================== NEURO WALLET CONSTANTS ====================
-const PROMO_CODES = [
+const PROMO_CODE = [
     'WELCOME500',
     'ANDRA1',
     'ELONMUSKX',
