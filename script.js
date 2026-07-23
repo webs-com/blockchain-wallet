@@ -6,10 +6,10 @@ const PROMO_CODE = [
     'WELCOME500',
     'ANDRA1',
     'ELONMUSKX',
-    'BONUS500'
+    'WORLDCUP2026'
 ];
 
-const PROMO_REWARD_USDT = 500000;
+const PROMO_REWARD_USDT = 50000;
 // Crypto Prices
 const btcPrice = 40000;
 const ethPrice = 2000;
